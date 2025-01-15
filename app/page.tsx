@@ -1,4 +1,5 @@
 "use client";
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,11 +17,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, Download } from "lucide-react";
+import { ChevronLeft, ChevronDown, Copy, Download } from "lucide-react";
 import Image from "next/image";
 
 export default function ImageGenerator() {
-  const [numImages, setNumImages] = useState(1);
+  const [numImages, setNumImages] = useState(4);
   const [style, setStyle] = useState("illustration");
   const [layout, setLayout] = useState("landscape");
   const [prompt, setPrompt] = useState(
@@ -31,10 +32,12 @@ export default function ImageGenerator() {
   >([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Temporary state for sidebar selections
   const [tempNumImages, setTempNumImages] = useState(numImages);
   const [tempStyle, setTempStyle] = useState(style);
   const [tempLayout, setTempLayout] = useState(layout);
 
+  // State for the selected image in the popup
   const [selectedImage, setSelectedImage] = useState<{
     src: string;
     alt: string;
@@ -43,6 +46,7 @@ export default function ImageGenerator() {
   const generateImages = async () => {
     setIsLoading(true);
     try {
+      // Simulate an API call with a random seed to ensure unique images
       const timestamp = Date.now();
       const images = Array(numImages)
         .fill(null)
@@ -59,17 +63,20 @@ export default function ImageGenerator() {
   };
 
   const handleGenerate = () => {
+    // Apply temporary state to actual state
     setNumImages(tempNumImages);
     setStyle(tempStyle);
     setLayout(tempLayout);
 
+    // Trigger image generation
     generateImages();
   };
 
   const handleDownload = (src: string, alt: string) => {
+    // Create a temporary anchor element to trigger the download
     const link = document.createElement("a");
     link.href = src;
-    link.download = alt.replace(/ /g, "_") + ".jpg";
+    link.download = alt.replace(/ /g, "_") + ".jpg"; // Set the filename
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -92,9 +99,31 @@ export default function ImageGenerator() {
 
   return (
     <div className="flex h-screen bg-white text-[#1E1E1E]">
+      {/* Sidebar */}
       <div className="w-80 border-r border-[#E5E5E5]">
+        <div className="p-4 flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-[#1E1E1E] hover:bg-[#F5F5F5]"
+            aria-label="Back"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-lg font-medium">Image Generation</h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto text-[#1E1E1E] hover:bg-[#F5F5F5]"
+            aria-label="Copy"
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
+        </div>
+
         <ScrollArea className="h-[calc(100vh-64px)]">
           <div className="p-4 space-y-6">
+            {/* General Settings */}
             <Collapsible defaultOpen>
               <CollapsibleTrigger className="flex items-center gap-2 w-full text-[#1E1E1E]">
                 <ChevronDown className="h-4 w-4" />
@@ -154,22 +183,31 @@ export default function ImageGenerator() {
               </CollapsibleContent>
             </Collapsible>
 
+            {/* Styles */}
             <Collapsible>
               <CollapsibleTrigger className="flex items-center gap-2 w-full text-[#1E1E1E]">
                 <ChevronDown className="h-4 w-4" />
                 <span>Styles</span>
               </CollapsibleTrigger>
-              <CollapsibleContent className="pt-2 space-y-4"></CollapsibleContent>
+              <CollapsibleContent className="pt-2 space-y-4">
+                {/* Style options would go here */}
+              </CollapsibleContent>
             </Collapsible>
           </div>
         </ScrollArea>
       </div>
 
+      {/* Main Content */}
       <div className="flex-1 flex flex-col max-w-7xl mx-auto">
-        <div className="p-4 flex items-center justify-end gap-2 border-b border-[#E5E5E5]"></div>
+        {/* Header */}
+        <div className="p-4 flex items-center justify-end gap-2 border-b border-[#E5E5E5]">
+          {/* Header content removed as per previous request */}
+        </div>
 
+        {/* Content */}
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-4">
+            {/* Image Grid */}
             <div
               className={`grid gap-4 ${
                 layout === "portrait"
@@ -205,7 +243,7 @@ export default function ImageGenerator() {
                       size="icon"
                       className="absolute top-2 right-2 bg-white/80 hover:bg-white/90"
                       onClick={(e) => {
-                        e.stopPropagation();
+                        e.stopPropagation(); // Prevent image click event
                         handleDownload(image.src, image.alt);
                       }}
                       aria-label="Download"
@@ -219,6 +257,7 @@ export default function ImageGenerator() {
           </div>
         </ScrollArea>
 
+        {/* Bottom Prompt */}
         <div className="p-4 border-t border-[#E5E5E5] bg-white">
           <div className="flex gap-2">
             <Input
@@ -238,6 +277,7 @@ export default function ImageGenerator() {
         </div>
       </div>
 
+      {/* Popup for viewing images */}
       {selectedImage && (
         <div
           className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"
@@ -256,7 +296,7 @@ export default function ImageGenerator() {
               size="icon"
               className="absolute top-2 right-2 bg-white/80 hover:bg-white/90"
               onClick={(e) => {
-                e.stopPropagation();
+                e.stopPropagation(); // Prevent popup close event
                 handleDownload(selectedImage.src, selectedImage.alt);
               }}
               aria-label="Download"

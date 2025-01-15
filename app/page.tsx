@@ -21,7 +21,7 @@ import { ChevronLeft, ChevronDown, Copy, Download } from "lucide-react";
 import Image from "next/image";
 
 export default function ImageGenerator() {
-  const [numImages, setNumImages] = useState(4);
+  const [numImages, setNumImages] = useState(1);
   const [style, setStyle] = useState("illustration");
   const [layout, setLayout] = useState("landscape");
   const [prompt, setPrompt] = useState(
@@ -32,12 +32,10 @@ export default function ImageGenerator() {
   >([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Temporary state for sidebar selections
   const [tempNumImages, setTempNumImages] = useState(numImages);
   const [tempStyle, setTempStyle] = useState(style);
   const [tempLayout, setTempLayout] = useState(layout);
 
-  // State for the selected image in the popup
   const [selectedImage, setSelectedImage] = useState<{
     src: string;
     alt: string;
@@ -46,37 +44,68 @@ export default function ImageGenerator() {
   const generateImages = async () => {
     setIsLoading(true);
     try {
-      // Simulate an API call with a random seed to ensure unique images
-      const timestamp = Date.now();
-      const images = Array(numImages)
-        .fill(null)
-        .map((_, i) => ({
-          src: `https://picsum.photos/seed/${timestamp + i}/400/300`,
-          alt: `Generated ${style} image in ${layout} layout based on prompt: ${prompt}`,
-        }));
-      setGeneratedImages(images);
+      // Define the request body
+      const requestBody = {
+        width: 1024,
+        height: 1024,
+        num_inference_steps: 4,
+        negative_prompt: "",
+        seed: -1,
+        response_extension: "webp",
+        response_format: "url",
+        prompt: prompt,
+        model: "black-forest-labs/flux-schnell",
+      };
+
+      // Send the request to the proxy server
+      const response = await fetch("/api/proxy", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      // Check if the response is OK
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`API Error: ${errorData.error || response.statusText}`);
+      }
+
+      // Parse the API response
+      const data: { data: { url: string }[] } = await response.json();
+
+      // Update the state with the generated image
+      setGeneratedImages([
+        {
+          src: data.data[0].url,
+          alt: `Generated image based on prompt: ${prompt}`,
+        },
+      ]);
     } catch (error) {
       console.error("Error generating images:", error);
+      if (error instanceof Error) {
+        alert(`Error: ${error.message}`); // Show error to the user
+      } else {
+        alert("An unknown error occurred."); // Handle unknown error type
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGenerate = () => {
-    // Apply temporary state to actual state
     setNumImages(tempNumImages);
     setStyle(tempStyle);
     setLayout(tempLayout);
 
-    // Trigger image generation
     generateImages();
   };
 
   const handleDownload = (src: string, alt: string) => {
-    // Create a temporary anchor element to trigger the download
     const link = document.createElement("a");
     link.href = src;
-    link.download = alt.replace(/ /g, "_") + ".jpg"; // Set the filename
+    link.download = alt.replace(/ /g, "_") + ".webp"; // Save as .webp
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -100,7 +129,7 @@ export default function ImageGenerator() {
   return (
     <div className="flex h-screen bg-white text-[#1E1E1E]">
       {/* Sidebar */}
-      <div className="w-80 border-r border-[#E5E5E5]">
+      <div className="w-64 border-r border-[#E5E5E5]">
         <div className="p-4 flex items-center gap-2">
           <Button
             variant="ghost"
@@ -199,41 +228,28 @@ export default function ImageGenerator() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="p-4 flex items-center justify-end gap-2 border-b border-[#E5E5E5]">
-          {/* Header content removed as per previous request */}
-        </div>
+        <div className="p-4 flex items-center justify-end gap-2 border-b border-[#E5E5E5]"></div>
 
-        {/* Content */}
         <ScrollArea className="flex-1">
-          <div className="p-4 space-y-4">
-            {/* Image Grid */}
-            <div
-              className={`grid gap-4 ${
-                layout === "portrait"
-                  ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
-                  : layout === "square"
-                  ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
-                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-              }`}
-            >
+          <div className="p-2 space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {isLoading ? (
                 <div className="col-span-full flex justify-center items-center">
                   <p>Loading...</p>
                 </div>
-              ) : (
+              ) : generatedImages.length > 0 ? (
                 generatedImages.map((image, i) => (
                   <Card key={i} className="bg-white border-[#E5E5E5] relative">
                     <Image
                       src={image.src || "/placeholder.svg"}
                       alt={image.alt}
-                      width={layout === "portrait" ? 200 : 300}
+                      width={layout === "portrait" ? 200 : 280}
                       height={
                         layout === "portrait"
-                          ? 300
+                          ? 280
                           : layout === "square"
-                          ? 300
-                          : 225
+                          ? 280
+                          : 210
                       }
                       className="w-full h-auto rounded-lg object-cover cursor-pointer"
                       onClick={() => handleImageClick(image)}
@@ -243,7 +259,7 @@ export default function ImageGenerator() {
                       size="icon"
                       className="absolute top-2 right-2 bg-white/80 hover:bg-white/90"
                       onClick={(e) => {
-                        e.stopPropagation(); // Prevent image click event
+                        e.stopPropagation();
                         handleDownload(image.src, image.alt);
                       }}
                       aria-label="Download"
@@ -252,14 +268,18 @@ export default function ImageGenerator() {
                     </Button>
                   </Card>
                 ))
+              ) : (
+                <div className="col-span-full flex justify-center items-center">
+                  <p>No images generated yet.</p>
+                </div>
               )}
             </div>
           </div>
         </ScrollArea>
 
-        {/* Bottom Prompt */}
-        <div className="p-4 border-t border-[#E5E5E5] bg-white">
-          <div className="flex gap-2">
+        {/* Prompt Input and Generate Button */}
+        <div className="p-2 border-t border-[#E5E5E5] bg-white">
+          <div className="flex gap-2 max-w-2xl mx-auto">
             <Input
               placeholder="Enter your prompt"
               value={prompt}
@@ -277,7 +297,7 @@ export default function ImageGenerator() {
         </div>
       </div>
 
-      {/* Popup for viewing images */}
+      {/* Image Popup */}
       {selectedImage && (
         <div
           className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"
@@ -285,18 +305,18 @@ export default function ImageGenerator() {
         >
           <div className="relative max-w-full max-h-full">
             <Image
-              src={selectedImage.src}
+              src={selectedImage.src || "/placeholder.svg"}
               alt={selectedImage.alt}
               width={800}
               height={600}
-              className="rounded-lg"
+              className="rounded-lg max-w-full max-h-[90vh] w-auto h-auto"
             />
             <Button
               variant="ghost"
               size="icon"
               className="absolute top-2 right-2 bg-white/80 hover:bg-white/90"
               onClick={(e) => {
-                e.stopPropagation(); // Prevent popup close event
+                e.stopPropagation();
                 handleDownload(selectedImage.src, selectedImage.alt);
               }}
               aria-label="Download"

@@ -1,242 +1,271 @@
 "use client";
-
-import React, { useState, useRef, useEffect } from "react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  ChevronLeft,
-  ChevronDown,
-  Undo,
-  Redo,
-  MousePointer2,
-  Hand,
-  Pencil,
-  Square,
-  ArrowUpRight,
-  Type,
-  Copy,
-  Image,
-  LayoutGrid,
-} from "lucide-react";
-import CanvasDraw from "react-canvas-draw";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown, Download } from "lucide-react";
+import Image from "next/image";
 
-import { toast } from "sonner";
-import { AIGeneratedImage, ShapeRecognitionResult } from "@/types/ai-design";
-import { AIAssistant } from "@/component/ai-assistant";
-import { mockAIService } from "@/types/mock";
-
-type SizeType = "S" | "M" | "L" | "XL";
-
-const DesignInterface: React.FC = () => {
-  const canvasRef = useRef<CanvasDraw | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const [currentTool, setCurrentTool] = useState<string>("pencil");
-  const [currentColor, setCurrentColor] = useState<string>("#000000");
-  const [currentSize, setCurrentSize] = useState<SizeType>("M");
-  const [generatedImages, setGeneratedImages] = useState<AIGeneratedImage[]>(
-    []
+export default function ImageGenerator() {
+  const [numImages, setNumImages] = useState(1);
+  const [style, setStyle] = useState("illustration");
+  const [layout, setLayout] = useState("landscape");
+  const [prompt, setPrompt] = useState(
+    "Generate an image of google headquarters"
   );
-  const [, setLastRecognizedShape] = useState<ShapeRecognitionResult | null>(
-    null
-  );
+  const [generatedImages, setGeneratedImages] = useState<
+    { src: string; alt: string }[]
+  >([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const colors = [
-    ["#000000", "#808080", "#E75480", "#800080"],
-    ["#0000FF", "#4169E1", "#FFA500", "#8B4513"],
-    ["#008000", "#90EE90", "#FFB6C1", "#FF0000"],
-  ];
+  const [tempNumImages, setTempNumImages] = useState(numImages);
+  const [tempStyle, setTempStyle] = useState(style);
+  const [tempLayout, setTempLayout] = useState(layout);
 
-  const sizes: SizeType[] = ["S", "M", "L", "XL"];
-  const sizeMap: Record<SizeType, number> = { S: 2, M: 4, L: 6, XL: 8 };
+  const [selectedImage, setSelectedImage] = useState<{
+    src: string;
+    alt: string;
+  } | null>(null);
 
-  useEffect(() => {
-    const updateDimensions = () => {
-      if (containerRef.current) {
-        setDimensions({
-          width: containerRef.current.clientWidth,
-          height: containerRef.current.clientHeight,
-        });
-      }
-    };
-
-    updateDimensions();
-    window.addEventListener("resize", updateDimensions);
-
-    return () => window.removeEventListener("resize", updateDimensions);
-  }, []);
-
-  const handleUndo = () => {
-    if (canvasRef.current) {
-      canvasRef.current.undo();
+  const generateImages = async () => {
+    setIsLoading(true);
+    try {
+      const timestamp = Date.now();
+      const images = Array(numImages)
+        .fill(null)
+        .map((_, i) => ({
+          src: `https://picsum.photos/seed/${timestamp + i}/400/300`,
+          alt: `Generated ${style} image in ${layout} layout based on prompt: ${prompt}`,
+        }));
+      setGeneratedImages(images);
+    } catch (error) {
+      console.error("Error generating images:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleClear = () => {
-    if (canvasRef.current) {
-      canvasRef.current.clear();
-    }
+  const handleGenerate = () => {
+    setNumImages(tempNumImages);
+    setStyle(tempStyle);
+    setLayout(tempLayout);
+
+    generateImages();
   };
 
-  const handleImageGenerated = (image: AIGeneratedImage) => {
-    setGeneratedImages((prev) => [image, ...prev]);
-    toast.success("Image generated successfully!");
+  const handleDownload = (src: string, alt: string) => {
+    const link = document.createElement("a");
+    link.href = src;
+    link.download = alt.replace(/ /g, "_") + ".jpg";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  // Mock shape recognition after drawing
-  const handleDrawingChange = () => {
-    if (currentTool === "pencil") {
-      const result = mockAIService.recognizeShape();
-      if (result.confidence > 0.8) {
-        setLastRecognizedShape(result);
-        toast.info(
-          `Detected a ${result.type} shape with ${Math.round(
-            result.confidence * 100
-          )}% confidence`
-        );
-      }
+  const handleImageClick = (image: { src: string; alt: string }) => {
+    setSelectedImage(image);
+  };
+
+  const closePopup = () => {
+    setSelectedImage(null);
+  };
+
+  const handleNumImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    if (value >= 1 && value <= 8) {
+      setTempNumImages(value);
     }
   };
 
   return (
-    <div
-      ref={containerRef}
-      className="h-screen w-full relative bg-gray-50 overflow-hidden"
-    >
-      {/* Canvas */}
-      {dimensions.width > 0 && dimensions.height > 0 && (
-        <CanvasDraw
-          ref={canvasRef}
-          brushColor={currentColor}
-          brushRadius={sizeMap[currentSize]}
-          canvasWidth={dimensions.width}
-          canvasHeight={dimensions.height}
-          hideGrid
-          className="absolute inset-0"
-          lazyRadius={0}
-          onChange={handleDrawingChange}
-        />
-      )}
-
-      {/* Overlay UI */}
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Top Navigation - enable pointer events for interactive elements */}
-        <div className="pointer-events-auto flex items-center p-2 bg-white/80 backdrop-blur-sm">
-          <button className="flex items-center text-sm text-gray-600 hover:bg-gray-100 rounded px-2 py-1">
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            <span>Back to content</span>
-          </button>
-          <div className="flex items-center ml-4">
-            <span className="text-sm">Page 1</span>
-            <ChevronDown className="w-4 h-4 ml-1" />
-          </div>
-          <div className="flex items-center ml-4 space-x-2">
-            <button
-              className="p-1 hover:bg-gray-100 rounded"
-              onClick={handleUndo}
-              aria-label="Undo"
-            >
-              <Undo className="w-4 h-4" />
-            </button>
-            <button className="p-1 hover:bg-gray-100 rounded" aria-label="Redo">
-              <Redo className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Right Sidebar - enable pointer events */}
-        <div className="pointer-events-auto absolute right-4 top-20 bg-white rounded-lg shadow-lg p-4">
-          {/* Color Palette */}
-          <div className="grid gap-2">
-            {colors.map((row, rowIndex) => (
-              <div key={rowIndex} className="flex space-x-2">
-                {row.map((color, colIndex) => (
-                  <button
-                    key={`${rowIndex}-${colIndex}`}
-                    className={`w-6 h-6 rounded-full ${
-                      color === currentColor ? "ring-2 ring-blue-500" : ""
-                    }`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setCurrentColor(color)}
-                    aria-label={`Select color ${color}`}
+    <div className="flex h-screen bg-white text-[#1E1E1E]">
+      <div className="w-80 border-r border-[#E5E5E5]">
+        <ScrollArea className="h-[calc(100vh-64px)]">
+          <div className="p-4 space-y-6">
+            <Collapsible defaultOpen>
+              <CollapsibleTrigger className="flex items-center gap-2 w-full text-[#1E1E1E]">
+                <ChevronDown className="h-4 w-4" />
+                <span>General settings</span>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-2 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm text-[#6E6E6E]">Models</label>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between bg-white text-[#1E1E1E] hover:bg-[#F5F5F5] border-[#E5E5E5]"
+                  >
+                    🎨 Flux
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm text-[#6E6E6E]">
+                    Number of Images
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={8}
+                    value={tempNumImages}
+                    onChange={handleNumImagesChange}
+                    className="w-full bg-white border-[#E5E5E5] text-[#1E1E1E]"
                   />
-                ))}
-              </div>
-            ))}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm text-[#6E6E6E]">Style</label>
+                  <Select value={tempStyle} onValueChange={setTempStyle}>
+                    <SelectTrigger className="w-full bg-white border-[#E5E5E5]">
+                      <SelectValue placeholder="Select style" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="illustration">Illustration</SelectItem>
+                      <SelectItem value="dark-humor">Dark Humor</SelectItem>
+                      <SelectItem value="scifi">Sci-Fi</SelectItem>
+                      <SelectItem value="art">Art</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm text-[#6E6E6E]">Layout</label>
+                  <Select value={tempLayout} onValueChange={setTempLayout}>
+                    <SelectTrigger className="w-full bg-white border-[#E5E5E5]">
+                      <SelectValue placeholder="Select layout" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="landscape">Landscape</SelectItem>
+                      <SelectItem value="portrait">Portrait</SelectItem>
+                      <SelectItem value="square">Square</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible>
+              <CollapsibleTrigger className="flex items-center gap-2 w-full text-[#1E1E1E]">
+                <ChevronDown className="h-4 w-4" />
+                <span>Styles</span>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-2 space-y-4"></CollapsibleContent>
+            </Collapsible>
           </div>
+        </ScrollArea>
+      </div>
 
-          {/* Size Options */}
-          <div className="mt-4 flex items-center space-x-2">
-            {sizes.map((size) => (
-              <button
-                key={size}
-                className={`w-8 h-8 rounded border ${
-                  currentSize === size
-                    ? "bg-gray-100 ring-2 ring-blue-500"
-                    : "hover:bg-gray-100"
-                } flex items-center justify-center text-sm`}
-                onClick={() => setCurrentSize(size)}
-                aria-label={`Select size ${size}`}
-              >
-                {size}
-              </button>
-            ))}
-          </div>
-        </div>
+      <div className="flex-1 flex flex-col max-w-7xl mx-auto">
+        <div className="p-4 flex items-center justify-end gap-2 border-b border-[#E5E5E5]"></div>
 
-        {/* AI Assistant */}
-        <div className="pointer-events-auto">
-          <AIAssistant onImageGenerated={handleImageGenerated} />
-        </div>
-
-        {/* Generated Images Preview */}
-        {generatedImages.length > 0 && (
-          <div className="pointer-events-auto absolute left-4 top-20 bg-white rounded-lg shadow-lg p-4 w-64">
-            <div className="text-sm font-medium mb-2">Generated Images</div>
-            <div className="grid grid-cols-2 gap-2">
-              {generatedImages.slice(0, 4).map((image) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  key={image.id}
-                  src={image.url}
-                  alt={image.prompt}
-                  className="w-full aspect-square object-cover rounded-md"
-                />
-              ))}
+        <ScrollArea className="flex-1">
+          <div className="p-4 space-y-4">
+            <div
+              className={`grid gap-4 ${
+                layout === "portrait"
+                  ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
+                  : layout === "square"
+                  ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
+                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+              }`}
+            >
+              {isLoading ? (
+                <div className="col-span-full flex justify-center items-center">
+                  <p>Loading...</p>
+                </div>
+              ) : (
+                generatedImages.map((image, i) => (
+                  <Card key={i} className="bg-white border-[#E5E5E5] relative">
+                    <Image
+                      src={image.src || "/placeholder.svg"}
+                      alt={image.alt}
+                      width={layout === "portrait" ? 200 : 300}
+                      height={
+                        layout === "portrait"
+                          ? 300
+                          : layout === "square"
+                          ? 300
+                          : 225
+                      }
+                      className="w-full h-auto rounded-lg object-cover cursor-pointer"
+                      onClick={() => handleImageClick(image)}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 bg-white/80 hover:bg-white/90"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownload(image.src, image.alt);
+                      }}
+                      aria-label="Download"
+                    >
+                      <Download className="h-4 w-4 text-[#1E1E1E]" />
+                    </Button>
+                  </Card>
+                ))
+              )}
             </div>
           </div>
-        )}
+        </ScrollArea>
 
-        {/* Bottom Toolbar - enable pointer events */}
-        <div className="pointer-events-auto absolute bottom-4 left-1/2 transform -translate-x-1/2">
-          <div className="bg-white rounded-full shadow-lg px-4 py-2 flex items-center space-x-4">
-            {[
-              { tool: "pointer", icon: MousePointer2 },
-              { tool: "hand", icon: Hand },
-              { tool: "pencil", icon: Pencil },
-              { tool: "square", icon: Square },
-              { tool: "arrow", icon: ArrowUpRight },
-              { tool: "type", icon: Type },
-              { tool: "clear", icon: Copy, onClick: handleClear },
-              { tool: "image", icon: Image },
-              { tool: "grid", icon: LayoutGrid },
-            ].map(({ tool, icon: Icon, onClick }) => (
-              <button
-                key={tool}
-                className={`p-2 rounded-full ${
-                  currentTool === tool
-                    ? "bg-gray-100 ring-2 ring-blue-500"
-                    : "hover:bg-gray-100"
-                }`}
-                onClick={onClick || (() => setCurrentTool(tool))}
-                aria-label={tool}
-              >
-                <Icon className="w-5 h-5" />
-              </button>
-            ))}
+        <div className="p-4 border-t border-[#E5E5E5] bg-white">
+          <div className="flex gap-2">
+            <Input
+              placeholder="Enter your prompt"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              className="flex-1 bg-white border-[#E5E5E5] text-[#1E1E1E] focus:border-[#7C3AED] focus:ring-[#7C3AED]"
+            />
+            <Button
+              className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white"
+              onClick={handleGenerate}
+              disabled={isLoading}
+            >
+              {isLoading ? "Generating..." : "Generate"}
+            </Button>
           </div>
         </div>
       </div>
+
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"
+          onClick={closePopup}
+        >
+          <div className="relative max-w-full max-h-full">
+            <Image
+              src={selectedImage.src}
+              alt={selectedImage.alt}
+              width={800}
+              height={600}
+              className="rounded-lg"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-2 right-2 bg-white/80 hover:bg-white/90"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDownload(selectedImage.src, selectedImage.alt);
+              }}
+              aria-label="Download"
+            >
+              <Download className="h-4 w-4 text-[#1E1E1E]" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
-
-export default DesignInterface;
+}

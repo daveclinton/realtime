@@ -5,27 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  ChevronLeft,
-  ChevronDown,
-  Copy,
-  Download,
-  Heart,
-  X,
-} from "lucide-react";
+import { Download, Heart } from "lucide-react";
 import Image from "next/image";
+import Sidebar from "@/components/sidebar/sidebar";
+import SettingsSection from "@/components/sidebar/settings-section";
+import TextOverlaySection from "@/components/sidebar/text-overlay";
+import FavoritesSection from "@/components/sidebar/favorites-section";
 
 export default function ImageGenerator() {
   const [numImages, setNumImages] = useState(1);
@@ -52,14 +37,12 @@ export default function ImageGenerator() {
     []
   );
 
-  // Text overlay state
   const [textOverlay, setTextOverlay] = useState("");
-  const [textStyle, setTextStyle] = useState("bold"); // Default text style
+  const [textStyle, setTextStyle] = useState("bold");
 
   const generateImages = async () => {
     setIsLoading(true);
     try {
-      // Combine the prompt with the text overlay and style
       const fullPrompt = `${prompt} with text overlay: "${textOverlay}" in ${textStyle} style`;
 
       const requests = Array.from({ length: tempNumImages }, () => {
@@ -73,7 +56,7 @@ export default function ImageGenerator() {
           seed: -1,
           response_extension: "webp",
           response_format: "url",
-          prompt: fullPrompt, // Use the full prompt with text overlay
+          prompt: fullPrompt,
           model: "black-forest-labs/flux-schnell",
         };
         return fetch("/api/proxy", {
@@ -159,152 +142,26 @@ export default function ImageGenerator() {
 
   return (
     <div className="flex h-screen bg-white text-[#1E1E1E]">
-      <div className="w-64 border-r border-[#E5E5E5]">
-        <div className="p-4 flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-[#1E1E1E] hover:bg-[#F5F5F5]"
-            aria-label="Back"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <h1 className="text-lg font-medium">Image Generation</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="ml-auto text-[#1E1E1E] hover:bg-[#F5F5F5]"
-            aria-label="Copy"
-          >
-            <Copy className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <ScrollArea className="h-[calc(100vh-64px)]">
-          <div className="p-4 space-y-6">
-            <Collapsible defaultOpen>
-              <CollapsibleTrigger className="flex items-center gap-2 w-full text-[#1E1E1E]">
-                <ChevronDown className="h-4 w-4" />
-                <span>General settings</span>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-2 space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm text-[#6E6E6E]">Models</label>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-between bg-white text-[#1E1E1E] hover:bg-[#F5F5F5] border-[#E5E5E5]"
-                  >
-                    🎨 Flux
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-[#6E6E6E]">
-                    Number of Images
-                  </label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={8}
-                    value={tempNumImages}
-                    onChange={handleNumImagesChange}
-                    className="w-full bg-white border-[#E5E5E5] text-[#1E1E1E]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-[#6E6E6E]">Style</label>
-                  <Select value={tempStyle} onValueChange={setTempStyle}>
-                    <SelectTrigger className="w-full bg-white border-[#E5E5E5]">
-                      <SelectValue placeholder="Select style" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="illustration">Illustration</SelectItem>
-                      <SelectItem value="dark-humor">Dark Humor</SelectItem>
-                      <SelectItem value="scifi">Sci-Fi</SelectItem>
-                      <SelectItem value="art">Art</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-[#6E6E6E]">Layout</label>
-                  <Select value={tempLayout} onValueChange={setTempLayout}>
-                    <SelectTrigger className="w-full bg-white border-[#E5E5E5]">
-                      <SelectValue placeholder="Select layout" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="landscape">Landscape</SelectItem>
-                      <SelectItem value="portrait">Portrait</SelectItem>
-                      <SelectItem value="square">Square</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center gap-2 w-full text-[#1E1E1E]">
-                <ChevronDown className="h-4 w-4" />
-                <span>Text Overlay</span>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-2 space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm text-[#6E6E6E]">Text</label>
-                  <Input
-                    type="text"
-                    placeholder="Enter text for overlay"
-                    value={textOverlay}
-                    onChange={(e) => setTextOverlay(e.target.value)}
-                    className="w-full bg-white border-[#E5E5E5] text-[#1E1E1E]"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-[#6E6E6E]">Text Style</label>
-                  <Select value={textStyle} onValueChange={setTextStyle}>
-                    <SelectTrigger className="w-full bg-white border-[#E5E5E5]">
-                      <SelectValue placeholder="Select text style" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bold">Bold</SelectItem>
-                      <SelectItem value="italic">Italic</SelectItem>
-                      <SelectItem value="underline">Underline</SelectItem>
-                      <SelectItem value="shadow">Shadow</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-
-            <Collapsible>
-              <CollapsibleTrigger className="flex items-center gap-2 w-full text-[#1E1E1E]">
-                <ChevronDown className="h-4 w-4" />
-                <span>Favorites</span>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="pt-2 space-y-4">
-                {favorites.map((fav, i) => (
-                  <div key={i} className="relative">
-                    <Image
-                      src={fav.src}
-                      alt={fav.alt}
-                      width={100}
-                      height={100}
-                      className="w-full h-auto rounded-lg object-cover"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2 bg-white/80 hover:bg-white/90"
-                      onClick={() => toggleFavorite(fav)}
-                      aria-label="Remove Favorite"
-                    >
-                      <X className="h-4 w-4 text-[#1E1E1E]" />
-                    </Button>
-                  </div>
-                ))}
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        </ScrollArea>
-      </div>
+      <Sidebar>
+        <SettingsSection
+          tempNumImages={tempNumImages}
+          handleNumImagesChange={handleNumImagesChange}
+          tempStyle={tempStyle}
+          setTempStyle={setTempStyle}
+          tempLayout={tempLayout}
+          setTempLayout={setTempLayout}
+        />
+        <TextOverlaySection
+          textOverlay={textOverlay}
+          setTextOverlay={setTextOverlay}
+          textStyle={textStyle}
+          setTextStyle={setTextStyle}
+        />
+        <FavoritesSection
+          favorites={favorites}
+          toggleFavorite={toggleFavorite}
+        />
+      </Sidebar>
 
       <div className="flex-1 flex flex-col max-w-7xl mx-auto">
         <div className="p-4 flex items-center justify-end gap-2 border-b border-[#E5E5E5]"></div>

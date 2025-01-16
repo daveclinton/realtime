@@ -17,7 +17,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronLeft, ChevronDown, Copy, Download } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronDown,
+  Copy,
+  Download,
+  Heart,
+  X,
+} from "lucide-react";
 import Image from "next/image";
 
 export default function ImageGenerator() {
@@ -41,40 +48,63 @@ export default function ImageGenerator() {
     alt: string;
   } | null>(null);
 
+  const [favorites, setFavorites] = useState<{ src: string; alt: string }[]>(
+    []
+  );
+
+  // Text overlay state
+  const [textOverlay, setTextOverlay] = useState("");
+  const [textStyle, setTextStyle] = useState("bold"); // Default text style
+
   const generateImages = async () => {
     setIsLoading(true);
     try {
-      const requestBody = {
-        width: 1024,
-        height: 1024,
-        num_inference_steps: 4,
-        negative_prompt: "",
-        seed: -1,
-        response_extension: "webp",
-        response_format: "url",
-        prompt: prompt,
-        model: "black-forest-labs/flux-schnell",
-      };
-      const response = await fetch("/api/proxy", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
+      // Combine the prompt with the text overlay and style
+      const fullPrompt = `${prompt} with text overlay: "${textOverlay}" in ${textStyle} style`;
+
+      const requests = Array.from({ length: tempNumImages }, () => {
+        const requestBody = {
+          width:
+            layout === "landscape" ? 1024 : layout === "portrait" ? 768 : 1024,
+          height:
+            layout === "landscape" ? 768 : layout === "portrait" ? 1024 : 1024,
+          num_inference_steps: 4,
+          negative_prompt: "",
+          seed: -1,
+          response_extension: "webp",
+          response_format: "url",
+          prompt: fullPrompt, // Use the full prompt with text overlay
+          model: "black-forest-labs/flux-schnell",
+        };
+        return fetch("/api/proxy", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        });
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`API Error: ${errorData.error || response.statusText}`);
-      }
+      const responses = await Promise.all(requests);
 
-      const data: { data: { url: string }[] } = await response.json();
-      setGeneratedImages([
-        {
-          src: data.data[0].url,
-          alt: `Generated image based on prompt: ${prompt}`,
-        },
-      ]);
+      const data = await Promise.all(
+        responses.map(async (response) => {
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(
+              `API Error: ${errorData.error || response.statusText}`
+            );
+          }
+          return response.json();
+        })
+      );
+
+      const newImages = data.map((d, i) => ({
+        src: d.data[0]?.url || "/placeholder.svg",
+        alt: `Generated image ${i + 1} based on prompt: ${fullPrompt}`,
+      }));
+
+      setGeneratedImages(newImages);
     } catch (error) {
       console.error("Error generating images:", error);
       if (error instanceof Error) {
@@ -116,6 +146,14 @@ export default function ImageGenerator() {
     const value = parseInt(e.target.value, 10);
     if (value >= 1 && value <= 8) {
       setTempNumImages(value);
+    }
+  };
+
+  const toggleFavorite = (image: { src: string; alt: string }) => {
+    if (favorites.some((fav) => fav.src === image.src)) {
+      setFavorites(favorites.filter((fav) => fav.src !== image.src));
+    } else {
+      setFavorites([...favorites, image]);
     }
   };
 
@@ -206,9 +244,63 @@ export default function ImageGenerator() {
             <Collapsible>
               <CollapsibleTrigger className="flex items-center gap-2 w-full text-[#1E1E1E]">
                 <ChevronDown className="h-4 w-4" />
-                <span>Styles</span>
+                <span>Text Overlay</span>
               </CollapsibleTrigger>
-              <CollapsibleContent className="pt-2 space-y-4"></CollapsibleContent>
+              <CollapsibleContent className="pt-2 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm text-[#6E6E6E]">Text</label>
+                  <Input
+                    type="text"
+                    placeholder="Enter text for overlay"
+                    value={textOverlay}
+                    onChange={(e) => setTextOverlay(e.target.value)}
+                    className="w-full bg-white border-[#E5E5E5] text-[#1E1E1E]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm text-[#6E6E6E]">Text Style</label>
+                  <Select value={textStyle} onValueChange={setTextStyle}>
+                    <SelectTrigger className="w-full bg-white border-[#E5E5E5]">
+                      <SelectValue placeholder="Select text style" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bold">Bold</SelectItem>
+                      <SelectItem value="italic">Italic</SelectItem>
+                      <SelectItem value="underline">Underline</SelectItem>
+                      <SelectItem value="shadow">Shadow</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible>
+              <CollapsibleTrigger className="flex items-center gap-2 w-full text-[#1E1E1E]">
+                <ChevronDown className="h-4 w-4" />
+                <span>Favorites</span>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-2 space-y-4">
+                {favorites.map((fav, i) => (
+                  <div key={i} className="relative">
+                    <Image
+                      src={fav.src}
+                      alt={fav.alt}
+                      width={100}
+                      height={100}
+                      className="w-full h-auto rounded-lg object-cover"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 bg-white/80 hover:bg-white/90"
+                      onClick={() => toggleFavorite(fav)}
+                      aria-label="Remove Favorite"
+                    >
+                      <X className="h-4 w-4 text-[#1E1E1E]" />
+                    </Button>
+                  </div>
+                ))}
+              </CollapsibleContent>
             </Collapsible>
           </div>
         </ScrollArea>
@@ -241,6 +333,22 @@ export default function ImageGenerator() {
                       className="w-full h-auto rounded-lg object-cover cursor-pointer"
                       onClick={() => handleImageClick(image)}
                     />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-10 bg-white/80 hover:bg-white/90"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(image);
+                      }}
+                      aria-label="Favorite"
+                    >
+                      {favorites.some((fav) => fav.src === image.src) ? (
+                        <Heart className="h-4 w-4 text-red-500 fill-red-500" />
+                      ) : (
+                        <Heart className="h-4 w-4 text-[#1E1E1E]" />
+                      )}
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"

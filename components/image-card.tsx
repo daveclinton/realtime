@@ -27,8 +27,8 @@ const ImageCard: React.FC<ImageCardProps> = ({
       <Image
         src={image.src || "/placeholder.svg"}
         alt={image.alt}
-        width={layout === "portrait" ? 200 : 280}
-        height={layout === "portrait" ? 280 : layout === "square" ? 280 : 210}
+        width={layout === "portrait" ? 400 : 560}
+        height={layout === "portrait" ? 560 : layout === "square" ? 560 : 420}
         className="w-full h-auto rounded-lg object-cover cursor-pointer"
         onClick={() => handleImageClick(image)}
       />

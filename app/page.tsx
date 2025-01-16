@@ -41,7 +41,10 @@ export default function ImageGenerator() {
   const generateImages = async () => {
     setIsLoading(true);
     try {
-      const fullPrompt = `${prompt} with text overlay: "${textOverlay}" in ${textStyle} style`;
+      let fullPrompt = prompt;
+      if (textOverlay) {
+        fullPrompt += ` with text overlay: "${textOverlay}" in ${textStyle} style`;
+      }
 
       const requests = Array.from({ length: tempNumImages }, () => {
         const requestBody = {

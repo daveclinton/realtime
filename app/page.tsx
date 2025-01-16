@@ -55,8 +55,6 @@ export default function ImageGenerator() {
         prompt: prompt,
         model: "black-forest-labs/flux-schnell",
       };
-
-      // Send the request to the proxy server
       const response = await fetch("/api/proxy", {
         method: "POST",
         headers: {
@@ -65,16 +63,12 @@ export default function ImageGenerator() {
         body: JSON.stringify(requestBody),
       });
 
-      // Check if the response is OK
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(`API Error: ${errorData.error || response.statusText}`);
       }
 
-      // Parse the API response
       const data: { data: { url: string }[] } = await response.json();
-
-      // Update the state with the generated image
       setGeneratedImages([
         {
           src: data.data[0].url,
@@ -84,9 +78,9 @@ export default function ImageGenerator() {
     } catch (error) {
       console.error("Error generating images:", error);
       if (error instanceof Error) {
-        alert(`Error: ${error.message}`); // Show error to the user
+        alert(`Error: ${error.message}`);
       } else {
-        alert("An unknown error occurred."); // Handle unknown error type
+        alert("An unknown error occurred.");
       }
     } finally {
       setIsLoading(false);
@@ -104,7 +98,7 @@ export default function ImageGenerator() {
   const handleDownload = (src: string, alt: string) => {
     const link = document.createElement("a");
     link.href = src;
-    link.download = alt.replace(/ /g, "_") + ".webp"; // Save as .webp
+    link.download = alt.replace(/ /g, "_") + ".webp";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -127,7 +121,6 @@ export default function ImageGenerator() {
 
   return (
     <div className="flex h-screen bg-white text-[#1E1E1E]">
-      {/* Sidebar */}
       <div className="w-64 border-r border-[#E5E5E5]">
         <div className="p-4 flex items-center gap-2">
           <Button
@@ -151,7 +144,6 @@ export default function ImageGenerator() {
 
         <ScrollArea className="h-[calc(100vh-64px)]">
           <div className="p-4 space-y-6">
-            {/* General Settings */}
             <Collapsible defaultOpen>
               <CollapsibleTrigger className="flex items-center gap-2 w-full text-[#1E1E1E]">
                 <ChevronDown className="h-4 w-4" />
@@ -211,21 +203,17 @@ export default function ImageGenerator() {
               </CollapsibleContent>
             </Collapsible>
 
-            {/* Styles */}
             <Collapsible>
               <CollapsibleTrigger className="flex items-center gap-2 w-full text-[#1E1E1E]">
                 <ChevronDown className="h-4 w-4" />
                 <span>Styles</span>
               </CollapsibleTrigger>
-              <CollapsibleContent className="pt-2 space-y-4">
-                {/* Style options would go here */}
-              </CollapsibleContent>
+              <CollapsibleContent className="pt-2 space-y-4"></CollapsibleContent>
             </Collapsible>
           </div>
         </ScrollArea>
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col max-w-7xl mx-auto">
         <div className="p-4 flex items-center justify-end gap-2 border-b border-[#E5E5E5]"></div>
 
@@ -276,7 +264,6 @@ export default function ImageGenerator() {
           </div>
         </ScrollArea>
 
-        {/* Prompt Input and Generate Button */}
         <div className="p-2 border-t border-[#E5E5E5] bg-white">
           <div className="flex gap-2 max-w-2xl mx-auto">
             <Input
@@ -296,7 +283,6 @@ export default function ImageGenerator() {
         </div>
       </div>
 
-      {/* Image Popup */}
       {selectedImage && (
         <div
           className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"

@@ -1,16 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Download, Heart } from "lucide-react";
-import Image from "next/image";
 import Sidebar from "@/components/sidebar/sidebar";
 import SettingsSection from "@/components/sidebar/settings-section";
 import TextOverlaySection from "@/components/sidebar/text-overlay";
 import FavoritesSection from "@/components/sidebar/favorites-section";
+import MainContent from "@/components/main-content";
+import ImageGrid from "@/components/image-grid";
+import PromptInput from "@/components/prompt-input";
+import ImagePopup from "@/components/image-popup";
 
 export default function ImageGenerator() {
   const [numImages, setNumImages] = useState(1);
@@ -43,7 +41,10 @@ export default function ImageGenerator() {
   const generateImages = async () => {
     setIsLoading(true);
     try {
-      const fullPrompt = `${prompt} with text overlay: "${textOverlay}" in ${textStyle} style`;
+      let fullPrompt = prompt;
+      if (textOverlay) {
+        fullPrompt += ` with text overlay: "${textOverlay}" in ${textStyle} style`;
+      }
 
       const requests = Array.from({ length: tempNumImages }, () => {
         const requestBody = {
@@ -163,119 +164,29 @@ export default function ImageGenerator() {
         />
       </Sidebar>
 
-      <div className="flex-1 flex flex-col max-w-7xl mx-auto">
-        <div className="p-4 flex items-center justify-end gap-2 border-b border-[#E5E5E5]"></div>
+      <MainContent>
+        <ImageGrid
+          isLoading={isLoading}
+          generatedImages={generatedImages}
+          layout={layout}
+          favorites={favorites}
+          toggleFavorite={toggleFavorite}
+          handleImageClick={handleImageClick}
+          handleDownload={handleDownload}
+        />
+        <PromptInput
+          prompt={prompt}
+          setPrompt={setPrompt}
+          handleGenerate={handleGenerate}
+          isLoading={isLoading}
+        />
+      </MainContent>
 
-        <ScrollArea className="flex-1">
-          <div className="p-2 space-y-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {isLoading ? (
-                <div className="col-span-full flex justify-center items-center">
-                  <p>Loading...</p>
-                </div>
-              ) : generatedImages.length > 0 ? (
-                generatedImages.map((image, i) => (
-                  <Card key={i} className="bg-white border-[#E5E5E5] relative">
-                    <Image
-                      src={image.src || "/placeholder.svg"}
-                      alt={image.alt}
-                      width={layout === "portrait" ? 200 : 280}
-                      height={
-                        layout === "portrait"
-                          ? 280
-                          : layout === "square"
-                          ? 280
-                          : 210
-                      }
-                      className="w-full h-auto rounded-lg object-cover cursor-pointer"
-                      onClick={() => handleImageClick(image)}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-10 bg-white/80 hover:bg-white/90"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(image);
-                      }}
-                      aria-label="Favorite"
-                    >
-                      {favorites.some((fav) => fav.src === image.src) ? (
-                        <Heart className="h-4 w-4 text-red-500 fill-red-500" />
-                      ) : (
-                        <Heart className="h-4 w-4 text-[#1E1E1E]" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2 bg-white/80 hover:bg-white/90"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDownload(image.src, image.alt);
-                      }}
-                      aria-label="Download"
-                    >
-                      <Download className="h-4 w-4 text-[#1E1E1E]" />
-                    </Button>
-                  </Card>
-                ))
-              ) : (
-                <div className="col-span-full flex justify-center items-center">
-                  <p>No images generated yet.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </ScrollArea>
-
-        <div className="p-2 border-t border-[#E5E5E5] bg-white">
-          <div className="flex gap-2 max-w-2xl mx-auto">
-            <Input
-              placeholder="Enter your prompt"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              className="flex-1 bg-white border-[#E5E5E5] text-[#1E1E1E] focus:border-[#7C3AED] focus:ring-[#7C3AED]"
-            />
-            <Button
-              className="bg-[#7C3AED] hover:bg-[#6D28D9] text-white"
-              onClick={handleGenerate}
-              disabled={isLoading}
-            >
-              {isLoading ? "Generating..." : "Generate"}
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {selectedImage && (
-        <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50"
-          onClick={closePopup}
-        >
-          <div className="relative max-w-full max-h-full">
-            <Image
-              src={selectedImage.src || "/placeholder.svg"}
-              alt={selectedImage.alt}
-              width={800}
-              height={600}
-              className="rounded-lg max-w-full max-h-[90vh] w-auto h-auto"
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute top-2 right-2 bg-white/80 hover:bg-white/90"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDownload(selectedImage.src, selectedImage.alt);
-              }}
-              aria-label="Download"
-            >
-              <Download className="h-4 w-4 text-[#1E1E1E]" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <ImagePopup
+        selectedImage={selectedImage}
+        closePopup={closePopup}
+        handleDownload={handleDownload}
+      />
     </div>
   );
 }

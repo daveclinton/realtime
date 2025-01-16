@@ -44,7 +44,6 @@ export default function ImageGenerator() {
   const generateImages = async () => {
     setIsLoading(true);
     try {
-      // Define the request body
       const requestBody = {
         width: 1024,
         height: 1024,
